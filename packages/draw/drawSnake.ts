@@ -1,69 +1,54 @@
-import { pathRoundedRect } from "./pathRoundedRect";
-import { snakeToCells } from "@snk/types/snake";
-import type { Snake } from "@snk/types/snake";
+import { Point } from "./types";
 
-type Options = {
-  colorSnake: string;
-  sizeCell: number;
-};
+export function drawSnake(points: Point[], options: any) {
+  const {
+    ctx,
+    cellSize,
+    snakeColor = "#00ff00", // hacker green
+    speed = 3,               // increased speed
+    length = 150,            // longer snake
+  } = options;
 
-export const drawSnake = (
-  ctx: CanvasRenderingContext2D,
-  snake: Snake,
-  o: Options,
-) => {
-  const cells = snakeToCells(snake);
+  let snake: Point[] = [];
+  let direction = { x: 1, y: 0 };
+  let frame = 0;
 
-  for (let i = 0; i < cells.length; i++) {
-    const u = (i + 1) * 0.6;
-
-    ctx.save();
-    ctx.fillStyle = o.colorSnake;
-    ctx.translate(cells[i].x * o.sizeCell + u, cells[i].y * o.sizeCell + u);
-    ctx.beginPath();
-    pathRoundedRect(
-      ctx,
-      o.sizeCell - u * 2,
-      o.sizeCell - u * 2,
-      (o.sizeCell - u * 2) * 0.25,
-    );
-    ctx.fill();
-    ctx.restore();
+  function randomDirection() {
+    const dirs = [
+      { x: 1, y: 0 },
+      { x: -1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 0, y: -1 },
+    ];
+    return dirs[Math.floor(Math.random() * dirs.length)];
   }
-};
 
-const lerp = (k: number, a: number, b: number) => (1 - k) * a + k * b;
-const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
+  return function tick() {
+    frame++;
+    if (frame % speed === 0) {
+      // occasionally randomize movement for hacker vibe
+      if (Math.random() < 0.2) {
+        direction = randomDirection();
+      }
 
-export const drawSnakeLerp = (
-  ctx: CanvasRenderingContext2D,
-  snake0: Snake,
-  snake1: Snake,
-  k: number,
-  o: Options,
-) => {
-  const m = 0.8;
-  const n = snake0.length / 2;
-  for (let i = 0; i < n; i++) {
-    const u = (i + 1) * 0.6 * (o.sizeCell / 16);
+      const head = snake.length
+        ? { x: snake[0].x + direction.x, y: snake[0].y + direction.y }
+        : { x: 0, y: 0 };
 
-    const a = (1 - m) * (i / Math.max(n - 1, 1));
-    const ki = clamp((k - a) / m, 0, 1);
+      snake.unshift(head);
 
-    const x = lerp(ki, snake0[i * 2 + 0], snake1[i * 2 + 0]) - 2;
-    const y = lerp(ki, snake0[i * 2 + 1], snake1[i * 2 + 1]) - 2;
+      // Limit snake length
+      if (snake.length > length) {
+        snake.pop();
+      }
+    }
 
-    ctx.save();
-    ctx.fillStyle = o.colorSnake;
-    ctx.translate(x * o.sizeCell + u, y * o.sizeCell + u);
-    ctx.beginPath();
-    pathRoundedRect(
-      ctx,
-      o.sizeCell - u * 2,
-      o.sizeCell - u * 2,
-      (o.sizeCell - u * 2) * 0.25,
-    );
-    ctx.fill();
-    ctx.restore();
-  }
-};
+    // Draw snake
+    ctx.fillStyle = snakeColor;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#00ff00";
+    snake.forEach((p) => {
+      ctx.fillRect(p.x * cellSize, p.y * cellSize, cellSize, cellSize);
+    });
+  };
+}
